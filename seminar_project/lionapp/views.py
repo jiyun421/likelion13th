@@ -80,3 +80,49 @@ def delete_post(request, pk):
         return JsonResponse(data, status=200)
     return JsonResponse({'message':'DELETE 요청만 허용됩니다.'})
 
+from django.http import HttpResponse
+
+def get_comment(request, post_id):
+    if request.method == 'GET':
+        post = get_object_or_404(Post, pk=post_id)
+        comment_list = post.comments.all()
+        return HttpResponse(comment_list, status=200)
+
+def click_like(request, post_id):
+    if request.method == 'POST':
+        post = get_object_or_404(Post, pk=post_id)
+        data = json.loads(request.body)
+        user_id = data.get("user_id")
+        member = get_object_or_404(Member, pk=user_id)
+        UserPost.objects.get_or_create(member_id=member, post_id=post) #UserPost 테이블에 추가
+        return HttpResponse(status=204)
+
+def get_like_count(request, post_id):
+    if request.method == 'GET':
+        post = get_object_or_404(Post, pk=post_id)
+        like_count = UserPost.objects.filter(post_id=post).count() #해당 포스트의 좋아요 수를 UserPost에서 가져옴
+        data = {
+            'like_count' : like_count
+		}
+		return JsonResponse(data, status=200)
+
+def sort_post(request):
+    if request.method == 'GET':
+        posts = Post.objects.all()
+        
+        posts_with_comment_count = []
+        for post in posts:
+            comment_count = post.comments.count()
+            posts_with_comment_count.append((post, comment_count)) #(게시물, 댓글 수) 리스트 만듦
+        
+        posts_sorted = sorted(posts_with_comment_count, key=lambda x: x[1], reverse=True) #댓글 수를 기준으로 내림차순 정렬. x[1]이 댓글 수를 뜻함. 
+        
+        data = []
+        for post in posts_sorted:
+            data.append({
+                'id': post.id,
+                '제목': post.title,
+                '내용': post.content,
+                '메시지': '조회 성공'
+            })
+        return JsonResponse({'posts': data}, status=200)
