@@ -3,20 +3,72 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from .models import *  
 
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+from .models import Post
+from .serializers import PostSerializer
+
+@api_view(['POST']) # !! 추가 부분 !!
 def create_post(request):
-    if request.method == 'POST':
-        data = json.loads(request.body)
+    title = request.data.get('title')  # request.body 대신 request.data 사용
+    content = request.data.get('content')
 
-        title = data.get('title')
-        content = data.get('content')
+    if not title or not content:
+        return Response({'message': '제목과 내용을 입력해주세요.'}, status=400)
 
-        post = Post(
-            title = title,
-            content = content
-        )
-        post.save()
-        return JsonResponse({'message':'success'})
-    return JsonResponse({'message':'POST 요청만 허용됩니다.'})
+    post = Post.objects.create(title=title, content=content)
+    
+    return Response({'message': 'success'}, status=201)
+    # JsonResponse 대신 Response 사용
+
+@api_view(['POST'])
+def create_post_v2(request):
+    serializer = PostSerializer(data=request.data) # JSON → Python 객체 변환 (역직렬화)
+    
+    if serializer.is_valid():  # 데이터 유효성 검사
+        post = serializer.save()  # DB 저장
+        message = f"id: {post.pk}번 포스트 생성 성공"
+        return Response({'message': message, 'post': serializer.data}, status=201)
+
+    return Response(serializer.errors, status=400)  # 유효성 검사 실패 시 오류 반환
+
+from rest_framework.views import APIView
+
+class PostApiView(APIView) :
+    def get(self, request, pk=None):
+        if pk: # 특정 pk 조회
+            post = get_object_or_404(Post, pk=pk)
+
+            postSerializer = PostSerializer(post) # Python -> JSON 변환 (직렬화)
+            message = f"id: {post.pk}번 포스트 조회 성공"
+            return Response({'message': message, 'post': postSerializer.data}, status=status.HTTP_200_OK)
+            # status=status.HTTP_200_OK 이런식으로도 작성 가능
+            # status=200도 가능!(저는 이렇게 쓰긴 합니당)
+        
+        posts = Post.objects.all() # 전체 조회
+        postSerializer = PostSerializer(posts, many=True) # 여러 객체일 땐 many=True 필수!
+        return Response({'posts': postSerializer.data}, status=200)
+    
+    def delete(self, request, pk):
+        post = get_object_or_404(Post, pk=pk)
+        post.delete()
+        
+        message = f"id: {pk}번 포스트 삭제 성공"
+        return Response({'message': message}, status=200)    
+
+    def patch(self, request, pk):
+        post = get_object_or_404(Post, pk=pk)
+        serializer = PostSerializer(post, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                'post': serializer.data,
+                'message': f'id: {pk}번 게시글 수정 성공'
+            }, status=200)
+        
+        return Response(serializer.errors, status=400)
 
 def get_post(request, pk):  # 특정 Post 객체를 조회하는 함수
 	if request.method == 'GET':  # HTTP 요청 메서드가 GET인지 확인
@@ -103,8 +155,8 @@ def get_like_count(request, post_id):
         like_count = UserPost.objects.filter(post_id=post).count() #해당 포스트의 좋아요 수를 UserPost에서 가져옴
         data = {
             'like_count' : like_count
-		}
-		return JsonResponse(data, status=200)
+		} 
+        return JsonResponse(data, status=200)
 
 def sort_post(request):
     if request.method == 'GET':
