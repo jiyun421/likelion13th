@@ -17,12 +17,15 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
-from util import views        # util 앱의 views.py 파일에서 뷰 함수들을 import
+from util import views
+from lionapp import views
+from users import views       # util 앱의 views.py 파일에서 뷰 함수들을 import
 
 urlpatterns = [                # URL 패턴 목록을 담는 변수
     path('admin/', admin.site.urls), # 'admin/' URL로 시작하는 요청은 Django 관리자 페이지로 연결
     
     path('util/', include('util.urls')), # 'util/' 로 시작하는 URL은 util/urls.py 파일에서 설정을 가져옴.
     # include 함수를 사용하여 다른 urls.py 파일의 URL 설정을 포함시킵니다.
-    path('lion/', include('lionapp.urls'))
+    path('lion/', include('lionapp.urls')),
+    path('users/', include('users.urls'))
 ]
