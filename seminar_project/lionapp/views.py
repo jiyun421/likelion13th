@@ -9,6 +9,24 @@ from rest_framework import status
 from .models import Post
 from .serializers import PostSerializer
 
+from drf_yasg.utils import swagger_auto_schema
+
+from rest_framework.decorators import authentication_classes
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
+@swagger_auto_schema(
+        method="POST", 
+        tags=["첫번째 view"],
+        operation_summary="post 생성", 
+        operation_description="post를 생성합니다.",
+        request_body= PostSerializer,
+        responses={
+            201: '201에 대한 설명', 
+            400: '400에 대한 설명',
+            500: '500에 대한 설명'
+        }
+)
+
 @api_view(['POST']) # !! 추가 부분 !!
 def create_post(request):
     title = request.data.get('title')  # request.body 대신 request.data 사용
