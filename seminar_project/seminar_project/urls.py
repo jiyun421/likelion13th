@@ -21,11 +21,36 @@ from util import views
 from lionapp import views
 from users import views       # util 앱의 views.py 파일에서 뷰 함수들을 import
 
+from django.urls import re_path
+
+from rest_framework.permissions import AllowAny
+from drf_yasg.views import get_schema_view
+from drf_yasg       import openapi
+
+from django.conf import settings
+from django.conf.urls.static import static
+
+schema_view = get_schema_view(
+    openapi.Info(
+        title="프로젝트 이름(예: likelion-project)",
+        default_version='프로젝트 버전(예: 1.1.1)',
+        description="해당 문서 설명(예: likelion-project API 문서)",
+        terms_of_service="https://www.google.com/policies/terms/",
+        contact=openapi.Contact(email="likelion@inha.edu"), # 부가정보
+        license=openapi.License(name="backend"),     # 부가정보
+    ),
+    public=True,
+    permission_classes=(AllowAny,),
+)
+
 urlpatterns = [                # URL 패턴 목록을 담는 변수
     path('admin/', admin.site.urls), # 'admin/' URL로 시작하는 요청은 Django 관리자 페이지로 연결
     
     path('util/', include('util.urls')), # 'util/' 로 시작하는 URL은 util/urls.py 파일에서 설정을 가져옴.
     # include 함수를 사용하여 다른 urls.py 파일의 URL 설정을 포함시킵니다.
     path('lion/', include('lionapp.urls')),
-    path('users/', include('users.urls'))
-]
+    path('users/', include('users.urls')),
+    # Swagger url
+    re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
+    re_path(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
